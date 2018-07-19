@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<head>
+<title>Simulation of Water using WebGL</title>
+<style type="text/css">
+#waves {
+    font-family: "Trebuchet MS", Arial, Helvetica, sans-serif;
+    border-collapse: collapse;
+    width: 100%;
+}
+
+#waves td, #waves th {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#waves tr:nth-child(even){background-color: #f2f2f2;}
+
+#waves tr:hover {background-color: #ddd;}
+
+#waves th {
+    padding-top: 12px;
+    padding-bottom: 12px;
+    text-align: left;
+    background-color: #4CAF50;
+    color: white;
+}
+#header {
+    position: fixed;
+    top: 0px;
+    height: 40px;
+    width: 100%;
+    background-color:#4CAF50;
+    text-align: center;
+    color: white;
+    font-size: 24px;
+}
+#page{ margin-top: 30px;}
+</style>
+</head>
+
+<body>
+<div id="header">
+ Simulation of Water using WebGL --- Simron Thapa
+</div>
+<div id="page">
+
+<script type="text/javascript" src="scripts/jquery-1.7.2.min.js"></script>
+<script type="text/javascript" src="scripts/jquery.mousewheel.min.js"></script>
+
+<p>
+<canvas id="glview" width="800" height="600" style="width: 100%; height: 700px">
+Canvas not supported! =[
+</canvas>
+</p>
+
+<div id="error" style="color: red; font-weight: bold;">
+Failed to initialize WebGL! Please check if your browser can support it!
+</div>
+
+<table id="waves">
+  <tr>
+    <th id="enable"></th>
+    <th id="amplitude">Amplitude</th>
+    <th id="wavelength">Wavelength</th>
+    <th id="direction">Direction</th>
+    <th id="speed">Speed</th>
+    <th></th>
+  </tr>
+
+  <tr id="wave0">
+    <td><input type="checkbox" checked /></td>
+    <td><input type="text" value="0.5" size="6" /></td>
+    <td><input type="text" value="20" size="6" /></td>
+    <td><input type="text" value="45" size="6" /></td>
+    <td><input type="text" value="0.4" size="6" /></td>
+    <th rowspan="4">Big waves</th>
+  </tr>
+
+  <tr id="wave1">
+    <td><input type="checkbox" checked /></td>
+    <td><input type="text" value="0.4" size="6" /></td>
+    <td><input type="text" value="15" size="6" /></td>
+    <td><input type="text" value="120" size="6" /></td>
+    <td><input type="text" value="0.8" size="6" /></td>
+  </tr>
+
+  <tr id="wave2">
+    <td><input type="checkbox" checked /></td>
+    <td><input type="text" value="0.2" size="6" /></td>
+    <td><input type="text" value="12" size="6" /></td>
+    <td><input type="text" value="170" size="6" /></td>
+    <td><input type="text" value="0.8" size="6" /></td>
+  </tr>
+
+  <tr id="wave3">
+    <td><input type="checkbox" checked /></td>
+    <td><input type="text" value="0.1" size="6" /></td>
+    <td><input type="text" value="10" size="6" /></td>
+    <td><input type="text" value="65" size="6" /></td>
+    <td><input type="text" value="1.0" size="6" /></td>
+  </tr>
+
+  <tr>
+    <td colspan="6"><hr /></td>
+  </tr>
+
+  <tr id="wave4">
+    <td><input type="checkbox" checked /></td>
+    <td><input type="text" value="0.01" size="6" /></td>
+    <td><input type="text" value="1.0" size="6" /></td>
+    <td><input type="text" value="170" size="6" /></td>
+    <td><input type="text" value="1.0" size="6" /></td>
+    <th rowspan="4">Small waves</th>
+  </tr>
+
+  <tr id="wave5">
+    <td><input type="checkbox" checked /></td>
+    <td><input type="text" value="0.02" size="6" /></td>
+    <td><input type="text" value="1.5" size="6" /></td>
+    <td><input type="text" value="110" size="6" /></td>
+    <td><input type="text" value="0.7" size="6" /></td>
+  </tr>
+
+  <tr id="wave6">
+    <td><input type="checkbox" checked /></td>
+    <td><input type="text" value="0.015" size="6" /></td>
+    <td><input type="text" value="1.2" size="6" /></td>
+    <td><input type="text" value="80" size="6" /></td>
+    <td><input type="text" value="0.8" size="6" /></td>
+  </tr>
+
+  <tr id="wave7">
+    <td><input type="checkbox" checked /></td>
+    <td><input type="text" value="0.006" size="6" /></td>
+    <td><input type="text" value="0.8" size="6" /></td>
+    <td><input type="text" value="60" size="6" /></td>
+    <td><input type="text" value="1.2" size="6" /></td>
+  </tr>
+
+</table>
+<div style="background-color:#4CAF50;">
+<p>
+<label style="color: white;font-size: 20px"><input type="checkbox" id="waterVisible" checked />Show water</label><br />
+<label style="color: white;font-size: 20px"><input type="checkbox" id="terrainVisible" checked />Show terrain</label><br />
+</p>
+</div>
+<script type="text/javascript" src="webgl/shader.js"></script>
+<script type="text/javascript" src="webgl/buffer.js"></script>
+<script type="text/javascript" src="webgl/mesh.js"></script>
+<script type="text/javascript" src="webgl/matrix.js"></script>
+<script type="text/javascript" src="webgl/texture.js"></script>
+<script type="text/javascript" src="webgl/camera.js"></script>
+<script type="text/javascript" src="webgl/vector.js"></script>
+
+<script language="javascript">
+$(document).ready(start);
+
+var gl;
+
+var terrainMesh, waterMesh;
+
+var width = 128, height = 128;
+
+var terrainHeight = 30.0;
+var waterHeight = 20.0;
+
+var camera = new Camera(new Vector([68.0, 45.0, terrainHeight]),
+                        15.0,
+                        Math.PI/4.0,
+                        3.0*Math.PI/2.0);
+var startTime = new Date();
+
+var lightAngle = Math.PI/6.;
+var lightDirection = [Math.sin(lightAngle), 0.0, Math.cos(lightAngle)];
+
+var projection = identityMatrix.perspective(45.0, 4/3, 2.0, 200.0);
+var view;
+var cameraPos;
+updateCamera();
+
+var waterVisible = document.getElementById("waterVisible").checked;
+var terrainVisible = document.getElementById("terrainVisible").checked;
+
+var waveColumnNames = [];
+$("#waves th").each(function (index, elem) {
+  waveColumnNames[index] = elem.id;
+});
+
+
+function start() {
+  var canvas = document.getElementById("glview");
+  initWebGL(canvas);
+
+  gl.clearColor(0.2, 0.4, 0.7, 1.0);
+  gl.enable(gl.DEPTH_TEST);
+  gl.enable(gl.BLEND);
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA);
+  gl.enable(gl.CULL_FACE);
+  gl.cullFace(gl.BACK);
+  gl.frontFace(gl.CCW);
+
+  initTerrainMesh();
+  initWaterMesh();
+  initEvents(canvas);
+  animate();
+}
+
+
+function initWebGL(canvas) {
+  gl = canvas.getContext("experimental-webgl", {
+    premultipliedAlpha: true,
+    alpha: false
+  });
+  if (!gl)
+    throw "Could not initialize WebGL!";
+  $("#error").remove();
+}
+
+
+function initEvents(canvas) {
+  var mouseIsDown = false;
+  var mouseX = -1, mouseY = -1;
+  $(canvas).bind("mousewheel", function(event, delta) {
+    event.preventDefault();
+    camera.zoom(delta);
+    updateCamera();
+  });
+  $(canvas).bind("mousedown", function(event) {
+    mouseIsDown = true;
+    mouseX = event.pageX;
+    mouseY = event.pageY;
+  });
+  $(document).bind("mouseup", function(event) {
+    mouseIsDown = false;
+    mouseX = -1;
+    mouseY = -1;
+  });
+  $(document).bind("mousemove", function(event) {
+    if (mouseIsDown) {
+      var dx = event.pageX - mouseX;
+      var dy = event.pageY - mouseY;
+      mouseX = event.pageX;
+      mouseY = event.pageY;
+      camera.rotate(dx, dy);
+      updateCamera();
+    }
+  });
+
+  $("#waves tr[id^=wave]").each(function (rowIndex, tr) {
+    $(tr).find("input").each(function (columnIndex, input) {
+      var uniformName = waveColumnNames[columnIndex];
+      if (uniformName == "enable") {
+        var handler = function (event) {
+          waterMesh.uniforms.enable.value[rowIndex] = input.checked;
+        }
+      } else {
+        var handler = function (event) {
+          var value = Number(input.value);
+          if (isNaN(value))
+            input.value = waterMesh.uniforms[uniformName].value[rowIndex];
+          else
+            waterMesh.uniforms[uniformName].value[rowIndex] = value;
+        }
+      }
+      $(input).bind("change", handler);
+    });
+  });
+
+  $("#waterVisible").bind("change", function(event) {
+    waterVisible = this.checked;
+  });
+  $("#terrainVisible").bind("change", function(event) {
+    terrainVisible = this.checked;
+  });
+}
+
+
+function initTerrainMesh() {
+  var i;
+  var shader = createShaderFromIds("terrain-vs", "terrain-fs");
+
+  function uniformMat4(location, value) {
+    this.uniformMatrix4fv(location, false, value.elements);
+  }
+  var uniforms = {
+    terrainHeight: { fn: gl.uniform1f, value: terrainHeight },
+    waterHeight: { fn: gl.uniform1f, value: waterHeight },
+    cameraPos: { fn: gl.uniform3fv, value: cameraPos },
+    projection: { fn: uniformMat4, value: projection },
+    view: { fn: uniformMat4, value: view },
+    width: { fn: gl.uniform1i, value: width },
+    height: { fn: gl.uniform1i, value: height },
+    lightDirection: { fn: gl.uniform3fv, value: lightDirection }
+  };
+
+  var position = new Float32Array(width * height * 2);
+  i = 0;
+  for (var y = 0; y < height; y++) {
+    for (var x = 0; x < width; x++) {
+      position[i++] = x;
+      position[i++] = y;
+    }
+  }
+  var positionBuffer = createBuffer(position, 2);
+
+  var index = new Uint16Array((width + 1) * (height - 1) * 2);
+  i = 0;
+  for (var y = 0; y < height - 1; y++) {
+    index[i++] = y * width;
+    for (var x = 0; x < width; x++) {
+      index[i++] = y * width + x;
+      index[i++] = (y+1) * width + x;
+    }
+    index[i++] = (y+1) * width + width - 1;
+  }
+  var indexBuffer = createIndexBuffer(index);
+
+  var attributes = {
+    position: positionBuffer
+  };
+
+  var heightmapTexture = createTextureFromURL("webgl/rocks_d.png");
+  var normalmapTexture = createTextureFromURL("webgl/rocks_n.png");
+  var sandTexture = createTextureFromURL("webgl/sand.png");
+  var grassTexture = createTextureFromURL("webgl/grass.png");
+  var textures = {
+    heightmap: heightmapTexture,
+    normalmap: normalmapTexture,
+    sand: sandTexture,
+    grass: grassTexture
+  };
+
+  terrainMesh = new IndexedMesh(indexBuffer,
+                                shader,
+                                uniforms,
+                                attributes,
+                                textures,
+                                gl.TRIANGLE_STRIP);
+}
+
+
+function initWaterMesh() {
+  var shader = createShaderFromIds("water-vs", "water-fs");
+
+  function uniformMat4(location, value) {
+    this.uniformMatrix4fv(location, false, value.elements);
+  }
+  var columnNames = [];
+  $("#waves th").each(function (index, elem) {
+    columnNames[index] = elem.id;
+  });
+
+  var uniforms = {
+    projection: { fn: uniformMat4, value: projection },
+    view: { fn: uniformMat4, value: view },
+    waterHeight: { fn: gl.uniform1f, value: waterHeight },
+    lightDirection: { fn: gl.uniform3fv, value: lightDirection },
+    cameraPos: { fn: gl.uniform3fv, value: cameraPos },
+    time: { fn: gl.uniform1f, value: 0.0 },
+    enable: { fn: gl.uniform1iv, value: new Int32Array(8) },
+    amplitude: { fn: gl.uniform1fv, value: new Float32Array(8) },
+    wavelength: { fn: gl.uniform1fv, value: new Float32Array(8) },
+    direction: { fn: gl.uniform1fv, value: new Float32Array(8) },
+    speed: { fn: gl.uniform1fv, value: new Float32Array(8) }
+  };
+  $("#waves tr[id^=wave]").each(function (rowIndex, tr) {
+    $(tr).find("input").each(function (columnIndex, input) {
+      var uniformName = waveColumnNames[columnIndex];
+      if (uniformName == "enable") {
+        uniforms.enable.value[rowIndex] = input.checked;
+      } else {
+        uniforms[uniformName].value[rowIndex] = input.value;
+      }
+    });
+  });
+
+  var position = new Float32Array(width * height * 2);
+  i = 0;
+  for (var y = 0; y < height; y++) {
+    for (var x = 0; x < width; x++) {
+      position[i++] = x;
+      position[i++] = y;
+    }
+  }
+  var positionBuffer = createBuffer(position, 2);
+
+  var index = new Uint16Array((width + 1) * (height - 1) * 2);
+  i = 0;
+  for (var y = 0; y < height - 1; y++) {
+    index[i++] = y * width;
+    for (var x = 0; x < width; x++) {
+      index[i++] = y * width + x;
+      index[i++] = (y+1) * width + x;
+    }
+    index[i++] = (y+1) * width + width - 1;
+  }
+  var indexBuffer = createIndexBuffer(index);
+
+  var attributes = {
+    position: positionBuffer
+  };
+
+  var cloudTexture = createTextureFromURL("webgl/clouds.png");
+  var textures = {
+    clouds: cloudTexture
+  };
+
+  waterMesh = new IndexedMesh(indexBuffer,
+                              shader,
+                              uniforms,
+                              attributes,
+                              textures,
+                              gl.TRIANGLE_STRIP);
+}
+
+
+function updateCamera() {
+  view = camera.matrix();
+  var pos = camera.position();
+  if (!cameraPos)
+    cameraPos = new Float32Array(3);
+  cameraPos[0] = pos[0];
+  cameraPos[1] = pos[1];
+  cameraPos[2] = pos[2];
+}
+
+
+function animate() {
+  draw();
+  setTimeout("animate();", 16);
+}
+
+
+function draw() {
+  gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+  var time = (new Date() - startTime) / 1000.0;
+  if (terrainVisible) {
+    terrainMesh.setUniform("view", view);
+    terrainMesh.setUniform("cameraPos", cameraPos);
+    terrainMesh.prepare();
+    terrainMesh.draw();
+  }
+  if (waterVisible) {
+    waterMesh.setUniform("view", view);
+    waterMesh.setUniform("cameraPos", cameraPos);
+    waterMesh.setUniform("time", time);
+    waterMesh.prepare();
+    waterMesh.draw();
+  }
+  gl.finish();
+}
+</script>
+
+<script id="terrain-vs" type="x-shader/x-vertex">
+uniform mat4 projection;
+uniform mat4 view;
+uniform int width, height;
+uniform mediump float terrainHeight;
+
+uniform sampler2D heightmap;
+uniform sampler2D normalmap;
+
+attribute vec3 position;
+
+varying vec3 normal;
+varying vec3 vPos;
+
+void main(void) {
+  vec2 heightmapCoord = position.xy / vec2(float(width - 1), float(height - 1));
+
+  vec3 normalColor = texture2D(normalmap, heightmapCoord).rgb;
+  normal = normalize(normalColor * 2.0 - vec3(1.0));
+
+  float z = texture2D(heightmap, heightmapCoord).r * terrainHeight;
+  vPos = vec3(position.xy, z);
+  gl_Position = projection * view * vec4(position.xy, z, 1.0);
+}
+</script>
+
+<script id="terrain-fs" type="x-shader/x-fragment">
+precision mediump float;
+
+const vec3 fogColor = vec3(0.2, 0.3, 0.5);
+
+uniform vec3 lightDirection;
+uniform vec3 cameraPos;
+uniform float terrainHeight;
+uniform float waterHeight;
+
+uniform sampler2D sand;
+uniform sampler2D grass;
+
+varying vec3 normal;
+varying vec3 vPos;
+
+void main(void) {
+  vec2 texCoord = vPos.xy / 16.0;
+  float grassBegin = waterHeight + 1.0;
+  float blendDistance = 2.0;
+  float blend = clamp((vPos.z - grassBegin) / blendDistance, 0.0, 1.0);
+  vec3 sandColor = texture2D(sand, texCoord).rgb;
+  vec3 grassColor = texture2D(grass, texCoord).rgb;
+  vec3 materialColor = (1.0 - blend) * sandColor + blend * grassColor;
+  float lightIntensity = max(0.0, dot(lightDirection, normalize(normal)));
+  vec3 surfaceColor = materialColor * lightIntensity;
+
+  vec3 eye = cameraPos - vPos;
+  float depth = waterHeight - vPos.z;
+  float fracWater = depth / eye.z;
+  float fogDepth = fracWater * length(eye);
+  float fog = clamp(fogDepth / waterHeight, 0.0, 1.0);
+  vec3 color = (1.0 - fog) * surfaceColor + fog * fogColor;
+  gl_FragColor = vec4(color, 1.0);
+}
+</script>
+
+<script id="water-vs" type="x-shader/x-vertex">
+precision mediump float;
+
+const float pi = 3.14159;
+
+uniform mat4 projection;
+uniform mat4 view;
+uniform float waterHeight;
+uniform float time;
+
+uniform bool enable[8];
+uniform float amplitude[8];
+uniform float wavelength[8];
+uniform float direction[8];
+uniform float speed[8];
+
+attribute vec2 position;
+
+varying vec3 vPos;
+
+float wave(int i) {
+  float frequency = 2.0*pi/wavelength[i];
+  float phase = speed[i] * frequency;
+  float d = direction[i] * pi/180.0;
+  vec2 dir = vec2(cos(d), sin(d));
+  float theta = dot(dir, position);
+  return amplitude[i] * sin(theta * frequency + time * phase);
+}
+
+float bigWaveHeight() {
+  float height = 0.0;
+  for (int i = 0; i < 4; i++) {
+    if (enable[i])
+      height += wave(i);
+  }
+  return height;
+}
+
+void main(void) {
+  float height = waterHeight + bigWaveHeight();
+  vPos = vec3(position, height);
+  gl_Position = projection * view * vec4(position, height, 1.0);
+}
+</script>
+
+<script id="water-fs" type="x-shader/x-fragment">
+precision mediump float;
+
+const float pi = 3.14159;
+
+uniform vec3 lightDirection;
+uniform vec3 cameraPos;
+uniform float time;
+
+uniform bool enable[8];
+uniform float amplitude[8];
+uniform float wavelength[8];
+uniform float direction[8];
+uniform float speed[8];
+
+uniform sampler2D clouds;
+
+varying vec3 vPos;
+
+vec3 waveNormal() {
+  float dx = 0.0;
+  float dy = 0.0;
+  for (int i = 0; i < 8; i++) {
+    if (enable[i]) {
+      float frequency = 2.0*pi/wavelength[i];
+      float phase = speed[i] * frequency;
+      float d = direction[i] * pi/180.0;
+      vec2 dir = vec2(cos(d), sin(d));
+      float theta = dot(dir, vPos.xy);
+      float angle = theta * frequency + time * phase;
+
+      dx += amplitude[i] * dir.y * frequency * cos(angle);
+      dy += amplitude[i] * dir.x * frequency * cos(angle);
+    }
+  }
+  vec3 n = vec3(-dx, -dy, 1.0);
+  return normalize(n);
+}
+
+void main(void) {
+  vec3 normal = waveNormal();
+  vec3 eye = normalize(cameraPos - vPos);
+
+  vec3 reflection = reflect(eye, normal);
+  vec2 texPoint = reflection.xy / reflection.z;
+  vec2 texCoord = texPoint * 0.5 + 0.5;
+  vec3 skyColor = texture2D(clouds, texCoord).rgb;
+
+  float cosi = dot(eye, normal);
+  float sini = 1.0 - cosi;
+  float R = 0.1 + 0.7 * sini;
+
+  gl_FragColor = vec4(skyColor, R);
+}
+</script>
+
+</div>
+</body>
+</html>

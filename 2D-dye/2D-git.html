@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en-US">
+
+<head>
+  <meta charset="utf-8">
+  <title>2D Fluid Simulation Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+</head>
+
+<body lang="en" >
+<article>
+<h1 class="title"><center>2D Fluid Simulation using WebGL and lightgl</center></h1>
+
+<figure>
+<canvas id="demo" width="600" height="600"></canvas>
+<figcaption><center>Click and drag to change the fluid flow. Double click to 
+reset.</center></figcaption>
+</figure>
+<br/>
+<!-- Trying out simulation without dyeSpots -->
+<!-- <figure>
+<canvas id="implementation" width="600" height="600"></canvas>
+</figure> -->
+
+<center><p>Pseudocode of the whole simulation:</p></center>
+
+<div align="center">
+    <div style="display: inline-block; text-align: left;">
+        <pre>
+            <code>
+                initialize color field, c
+                initialize velocity field, u
+
+                while(true):
+                u_a := advect field u through itself
+                d := calculate divergence of u_a
+                p := calculate pressure based on d, using jacobi iteration
+                u := u_a - gradient of p
+                c := advect field c through velocity field u
+                draw c
+                wait for a bit
+            </code>
+        </pre>
+    </div>
+</div>
+
+
+<script src="lightgl.js"></script>
+
+<script src="2D-fluidSimulation.js"></script>
+
+<script>
+
+new FluidSim("demo", {
+    threshold: false,
+    advectV: true,
+    applyPressure: true,
+    showArrows: false,
+    initCFn: [
+        'step(1.0, mod(floor((x + 1.0) / 0.2) + floor((y + 1.0) / 0.2), 2.0))',
+        'step(1.0, mod(floor((x + 1.0) / 0.3) + floor((y + 1.0) / 0.3), 2.0))',
+        'step(1.0, mod(floor((x + 1.0) / 0.4) + floor((y + 1.0) / 0.4), 2.0))'
+    ],
+    dyeSpots: true,
+    size: 600,
+});
+
+// new FluidSim("implementation", {
+//     threshold: false,
+//     advectV: true,
+//     applyPressure: true,
+//     showArrows: false
+// });
+
+</script>
+</article>
+</body>
+</html>
