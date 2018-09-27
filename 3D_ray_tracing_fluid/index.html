@@ -249,40 +249,28 @@
 			}
 
 			#define STILL_WATER_LEVEL 	50.0
-			#define WATER_WAVE_AMP 		3.0
+			#define WATER_WAVE_AMP 		2.0
 
-			float turbulence( vec3 p ) {
-
-		    	float w = 100.0;
-		    	float t = -.5;
-
-			    for (float f = 1.0 ; f <= 10.0 ; f++ ){
-			        float power = pow( 2.0, f );
-			        t += abs( pnoise( vec3( power * p ), vec3( 10.0, 10.0, 10.0 ) ) / power );
-			    }
-		    	return t;
-			}
 
 			float getWaterWaveHeight( vec3 pos )
 			{	
 				//Perlin noise code
 				float waveSpeed = uTime;
-				float noise = 15.0 *  -.10 * turbulence( .5 * norm); 
 		    	// get a 3d noise using the position, low frequency
-		    	float b = pnoise( 0.05 * pos + vec3(2.0), vec3( 100.0 ) );
+		    	float b = pnoise( 0.05 * pos + vec3(2.0 * waveSpeed), vec3( 100.0 ) );
 		    	// compose both noises
-		    	float displacement = noise + b;
+		    	float displacement = b;
 		    	return STILL_WATER_LEVEL + displacement * WATER_WAVE_AMP;
 			}
 
 			float getFloorBumps(vec3 pos)
 			{
 				//Perlin noise code
-				float noise = 20.0 *  -.10 * turbulence( .5 * norm ); 
+			
 		    	// get a 3d noise using the position, low frequency
 		    	float b = 20.0 * pnoise( 0.05 * pos + vec3(2.0 ), vec3( 100.0 ) );
 		    	// compose both noises
-		    	float displacement = 2.0+ (noise + b);
+		    	float displacement = 2.0 + b;
 		    	return displacement ;
 			}
 
