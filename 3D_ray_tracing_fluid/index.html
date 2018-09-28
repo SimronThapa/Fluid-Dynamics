@@ -1,10 +1,7 @@
-<!DOCTYPE html>
-<html lang="en">
-	<head>
-		<title>Water Rendering by Path Tracing - Simron Thapa</title>
-		<meta charset="utf-8">
-		<meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1">
-		<style>
+<!DOCTYPE html> <html lang="en">     <head>         <title>Water Rendering by
+Path Tracing - Simron Thapa</title>         <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-
+scale=1">         <style>
 
 			html, body {
 				width: 100%;
@@ -319,7 +316,7 @@
 				float h = 0.0;
 				d = 0.0; // reset d
 				
-				if(pos.y == 0.0){
+				if(pos.y <= 0.0){
 					for(int i = 0; i < 500; i++){
 						h = abs(pos.y - getFloorBumps(pos));
 						if (d > 10000.0 || h < 0.0) break;
@@ -608,6 +605,7 @@
 			var camFlightSpeed = 300;
 			var fontAspect;
 			var floorTexture;
+			var checker = 1;
 			
 			// the following variables will be used to calculate rotations and directions from the camera
 			var cameraControlsObject;//for positioning and moving the camera itself
@@ -620,7 +618,9 @@
 			
 			function init() {
 				
-				renderer = new THREE.WebGLRenderer();
+				renderer = new THREE.WebGLRenderer({
+    						preserveDrawingBuffer: true 
+							});;
 				renderer.autoClear = false;
 				// 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
 				renderer.setPixelRatio(pixelRatio);
@@ -843,9 +843,34 @@
 				// Render full screen quad with generated pathTracingRenderTarget in STEP 1 above.
 				// After the image is gamma corrected, it will be shown on the screen as the final accumulated output
 				renderer.render( screenOutputScene, quadCamera );
-					
+
+				// var imgData;
+				// if(elapsedTime % 5 == 0){
+				// 	imgData = renderer.domElement.toDataURL();
+				// 	console.log(imgData);
 				
-			} // end function animate()
+				// } 
+
+					/* Auto Download of canvas context after every 10 sec */
+					var imgData, imgNode;
+					 
+   					if(Math.round(elapsedTime) % 10 == 0 && Math.round(elapsedTime) !=checker ){
+   						 checker = Math.round(elapsedTime);
+   						try {
+        					imgData = renderer.domElement.toDataURL();      
+        					console.log(imgData);
+    					} 
+    					catch(e) {
+        					console.log("Browser does not support taking screenshot of 3d context");
+        					return;
+    					}
+
+    					var link = document.createElement('a');
+						link.download = "test.png";
+						link.href = imgData;
+						link.click();
+   					}  	
+				}// end function animate()
 
 		</script>
 
