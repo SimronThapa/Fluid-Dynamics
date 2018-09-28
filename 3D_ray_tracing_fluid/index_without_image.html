@@ -1,0 +1,870 @@
+<!DOCTYPE html> <html lang="en">     <head>         <title>Water Rendering by
+Path Tracing - Simron Thapa</title>         <meta charset="utf-8">
+<meta name="viewport" content="width=device-width, user-scalable=no, initial-
+scale=1">         <style>
+
+			html, body {
+				width: 100%;
+				height: 100%;
+				font-family: Arial;
+				background-color: #000;
+				color: #000;
+				margin: 0px;
+				overflow: hidden;
+				touch-action: none;
+			}
+			
+			#info {
+				position: absolute;
+				top: 5px;
+				width: 100%;
+				text-align: center;
+				color: #ffffff;
+			}		
+			
+		</style>
+	</head>
+	<body>
+
+		<div id="container"> </div>
+		<div id="info">Water Rendering by Path Tracing - Simron Thapa</div>
+
+		<script src="js/three.min.js"> </script>
+		<script src="js/pathTracingCommon.js"> </script>
+		<script src="js/FirstPersonCameraControls.js"> </script>
+		
+		<script id="pathTracingVertexShader" type="x-shader/x-vertex">
+		
+			precision highp float;
+			precision highp int;
+
+			varying vec2 vUv;
+			varying vec3 norm;
+
+			void main()
+			{
+				vUv = uv;
+				norm = normal;
+				gl_Position = vec4( position, 1.0 );
+			}
+		</script>
+		
+		<script id="pathTracingFragmentShader" type="x-shader/x-fragment">
+			//Perlin Noise Start
+			//
+			// GLSL textureless classic 3D noise "cnoise",
+			// with an RSL-style periodic variant "pnoise".
+			// Author:  Stefan Gustavson (stefan.gustavson@liu.se)
+			// Version: 2011-10-11
+			//
+			// Many thanks to Ian McEwan of Ashima Arts for the
+			// ideas for permutation and gradient selection.
+			//
+			// Copyright (c) 2011 Stefan Gustavson. All rights reserved.
+			// Distributed under the MIT license. See LICENSE file.
+			// https://github.com/ashima/webgl-noise
+			//
+			vec3 mod289(vec3 x)
+			{
+	  			return x - floor(x * (1.0 / 289.0)) * 289.0;
+			}
+			vec4 mod289(vec4 x)
+			{
+			  return x - floor(x * (1.0 / 289.0)) * 289.0;
+			}
+			vec4 permute(vec4 x)
+			{
+			  return mod289(((x*34.0)+1.0)*x);
+			}
+			vec4 taylorInvSqrt(vec4 r)
+			{
+			  return 1.79284291400159 - 0.85373472095314 * r;
+			}
+			vec3 fade(vec3 t) {
+			  return t*t*t*(t*(t*6.0-15.0)+10.0);
+			}
+			// Classic Perlin noise
+			float cnoise(vec3 P)
+			{
+			  vec3 Pi0 = floor(P); // Integer part for indexing
+			  vec3 Pi1 = Pi0 + vec3(1.0); // Integer part + 1
+			  Pi0 = mod289(Pi0);
+			  Pi1 = mod289(Pi1);
+			  vec3 Pf0 = fract(P); // Fractional part for interpolation
+			  vec3 Pf1 = Pf0 - vec3(1.0); // Fractional part - 1.0
+			  vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
+			  vec4 iy = vec4(Pi0.yy, Pi1.yy);
+			  vec4 iz0 = Pi0.zzzz;
+			  vec4 iz1 = Pi1.zzzz;
+			  vec4 ixy = permute(permute(ix) + iy);
+			  vec4 ixy0 = permute(ixy + iz0);
+			  vec4 ixy1 = permute(ixy + iz1);
+			  vec4 gx0 = ixy0 * (1.0 / 7.0);
+			  vec4 gy0 = fract(floor(gx0) * (1.0 / 7.0)) - 0.5;
+			  gx0 = fract(gx0);
+			  vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);
+			  vec4 sz0 = step(gz0, vec4(0.0));
+			  gx0 -= sz0 * (step(0.0, gx0) - 0.5);
+			  gy0 -= sz0 * (step(0.0, gy0) - 0.5);
+			  vec4 gx1 = ixy1 * (1.0 / 7.0);
+			  vec4 gy1 = fract(floor(gx1) * (1.0 / 7.0)) - 0.5;
+			  gx1 = fract(gx1);
+			  vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);
+			  vec4 sz1 = step(gz1, vec4(0.0));
+			  gx1 -= sz1 * (step(0.0, gx1) - 0.5);
+			  gy1 -= sz1 * (step(0.0, gy1) - 0.5);
+			  vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);
+			  vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);
+			  vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);
+			  vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);
+			  vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);
+			  vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);
+			  vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);
+			  vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);
+			  vec4 norm0 = taylorInvSqrt(vec4(dot(g000, g000), dot(g010, g010), dot(g100, g100), dot(g110, g110)));
+			  g000 *= norm0.x;
+			  g010 *= norm0.y;
+			  g100 *= norm0.z;
+			  g110 *= norm0.w;
+			  vec4 norm1 = taylorInvSqrt(vec4(dot(g001, g001), dot(g011, g011), dot(g101, g101), dot(g111, g111)));
+			  g001 *= norm1.x;
+			  g011 *= norm1.y;
+			  g101 *= norm1.z;
+			  g111 *= norm1.w;
+			  float n000 = dot(g000, Pf0);
+			  float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));
+			  float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));
+			  float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));
+			  float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));
+			  float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));
+			  float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));
+			  float n111 = dot(g111, Pf1);
+			  vec3 fade_xyz = fade(Pf0);
+			  vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);
+			  vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);
+			  float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x);
+			  return 2.2 * n_xyz;
+			}
+			// Classic Perlin noise, periodic variant
+			float pnoise(vec3 P, vec3 rep)
+			{
+			  vec3 Pi0 = mod(floor(P), rep); // Integer part, modulo period
+			  vec3 Pi1 = mod(Pi0 + vec3(1.0), rep); // Integer part + 1, mod period
+			  Pi0 = mod289(Pi0);
+			  Pi1 = mod289(Pi1);
+			  vec3 Pf0 = fract(P); // Fractional part for interpolation
+			  vec3 Pf1 = Pf0 - vec3(1.0); // Fractional part - 1.0
+			  vec4 ix = vec4(Pi0.x, Pi1.x, Pi0.x, Pi1.x);
+			  vec4 iy = vec4(Pi0.yy, Pi1.yy);
+			  vec4 iz0 = Pi0.zzzz;
+			  vec4 iz1 = Pi1.zzzz;
+			  vec4 ixy = permute(permute(ix) + iy);
+			  vec4 ixy0 = permute(ixy + iz0);
+			  vec4 ixy1 = permute(ixy + iz1);
+			  vec4 gx0 = ixy0 * (1.0 / 7.0);
+			  vec4 gy0 = fract(floor(gx0) * (1.0 / 7.0)) - 0.5;
+			  gx0 = fract(gx0);
+			  vec4 gz0 = vec4(0.5) - abs(gx0) - abs(gy0);
+			  vec4 sz0 = step(gz0, vec4(0.0));
+			  gx0 -= sz0 * (step(0.0, gx0) - 0.5);
+			  gy0 -= sz0 * (step(0.0, gy0) - 0.5);
+			  vec4 gx1 = ixy1 * (1.0 / 7.0);
+			  vec4 gy1 = fract(floor(gx1) * (1.0 / 7.0)) - 0.5;
+			  gx1 = fract(gx1);
+			  vec4 gz1 = vec4(0.5) - abs(gx1) - abs(gy1);
+			  vec4 sz1 = step(gz1, vec4(0.0));
+			  gx1 -= sz1 * (step(0.0, gx1) - 0.5);
+			  gy1 -= sz1 * (step(0.0, gy1) - 0.5);
+			  vec3 g000 = vec3(gx0.x,gy0.x,gz0.x);
+			  vec3 g100 = vec3(gx0.y,gy0.y,gz0.y);
+			  vec3 g010 = vec3(gx0.z,gy0.z,gz0.z);
+			  vec3 g110 = vec3(gx0.w,gy0.w,gz0.w);
+			  vec3 g001 = vec3(gx1.x,gy1.x,gz1.x);
+			  vec3 g101 = vec3(gx1.y,gy1.y,gz1.y);
+			  vec3 g011 = vec3(gx1.z,gy1.z,gz1.z);
+			  vec3 g111 = vec3(gx1.w,gy1.w,gz1.w);
+			  vec4 norm0 = taylorInvSqrt(vec4(dot(g000, g000), dot(g010, g010), dot(g100, g100), dot(g110, g110)));
+			  g000 *= norm0.x;
+			  g010 *= norm0.y;
+			  g100 *= norm0.z;
+			  g110 *= norm0.w;
+			  vec4 norm1 = taylorInvSqrt(vec4(dot(g001, g001), dot(g011, g011), dot(g101, g101), dot(g111, g111)));
+			  g001 *= norm1.x;
+			  g011 *= norm1.y;
+			  g101 *= norm1.z;
+			  g111 *= norm1.w;
+			  float n000 = dot(g000, Pf0);
+			  float n100 = dot(g100, vec3(Pf1.x, Pf0.yz));
+			  float n010 = dot(g010, vec3(Pf0.x, Pf1.y, Pf0.z));
+			  float n110 = dot(g110, vec3(Pf1.xy, Pf0.z));
+			  float n001 = dot(g001, vec3(Pf0.xy, Pf1.z));
+			  float n101 = dot(g101, vec3(Pf1.x, Pf0.y, Pf1.z));
+			  float n011 = dot(g011, vec3(Pf0.x, Pf1.yz));
+			  float n111 = dot(g111, Pf1);
+			  vec3 fade_xyz = fade(Pf0);
+			  vec4 n_z = mix(vec4(n000, n100, n010, n110), vec4(n001, n101, n011, n111), fade_xyz.z);
+			  vec2 n_yz = mix(n_z.xy, n_z.zw, fade_xyz.y);
+			  float n_xyz = mix(n_yz.x, n_yz.y, fade_xyz.x);
+			  return 2.2 * n_xyz;
+			}
+
+			//Perlin Noise End
+
+
+			precision highp float;
+			precision highp int;
+			precision highp sampler2D;
+			varying vec3 norm;
+			uniform sampler2D tFloorTexture;
+
+
+			#include <pathtracing_uniforms_and_defines>
+
+			#define N_QUADS 6
+
+
+			//-----------------------------------------------------------------------
+
+			struct Ray { vec3 origin; vec3 direction; };
+			struct Quad { vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
+			struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
+
+			Quad quads[N_QUADS];
+
+			#include <pathtracing_random_functions>
+
+			#include <pathtracing_triangle_intersect>
+
+
+			//----------------------------------------------------------------------------
+			float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
+			//----------------------------------------------------------------------------
+			{
+				float tTri1 = TriangleIntersect( v0, v1, v2, r );
+				float tTri2 = TriangleIntersect( v0, v2, v3, r );
+				return min(tTri1, tTri2);
+			}
+
+			#define STILL_WATER_LEVEL 	50.0
+			#define WATER_WAVE_AMP 		2.0
+
+
+			float getWaterWaveHeight( vec3 pos )
+			{	
+				//Perlin noise code
+				float waveSpeed = uTime;
+		    	// get a 3d noise using the position, low frequency
+		    	float b = pnoise( 0.05 * pos + vec3(2.0 * waveSpeed), vec3( 100.0 ) );
+		    	// compose both noises
+		    	float displacement = b;
+		    	return STILL_WATER_LEVEL + displacement * WATER_WAVE_AMP;
+			}
+
+			float getFloorBumps(vec3 pos)
+			{
+				//Perlin noise code
+			
+		    	// get a 3d noise using the position, low frequency
+		    	float b = 20.0 * pnoise( 0.05 * pos + vec3(2.0 ), vec3( 100.0 ) );
+		    	// compose both noises
+		    	float displacement = 2.0 + b;
+		    	return displacement ;
+			}
+
+			//------------------------------------------------------------------------------------------------
+			float SceneIntersect( Ray r, inout Intersection intersec, bool checkWater )
+			//------------------------------------------------------------------------------------------------
+			{
+				Ray rObj;
+			        float d, dw, dObj;
+				float t = INFINITY;
+				float waterWaveDepth;
+				vec3 hitWorldSpace;
+				vec3 normal, cn;
+				
+				
+				for (int i = 0; i < N_QUADS; i++)
+			    {
+					d = QuadIntersect( quads[i].v0, quads[i].v1, quads[i].v2, quads[i].v3, r );
+					if (d < t && d > 0.0)
+					{
+						t = d;
+						intersec.normal = normalize( cross(quads[i].v1 - quads[i].v0, quads[i].v2 - quads[i].v0) );
+						intersec.emission = quads[i].emission;
+						intersec.color = quads[i].color;
+						intersec.type = quads[i].type;
+					}
+			    }
+				
+				// color surfaces beneath the water a bluish color
+				vec3 underwaterHitPos = r.origin + r.direction * t;
+				float testPosWaveHeight = getWaterWaveHeight(underwaterHitPos);
+				if (underwaterHitPos.y < testPosWaveHeight)
+				{
+					intersec.color *= vec3(0.6, 1.0, 1.0);
+				}
+
+				if (!checkWater)
+					return t;
+
+				///////////////////////////////////////////////////////////////////////////////////////////////////////
+				// WATER VOLUME 
+				///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+				vec3 pos = r.origin;
+				vec3 dir = r.direction;
+				float h = 0.0;
+				d = 0.0; // reset d
+				
+				if(pos.y <= 0.0){
+					for(int i = 0; i < 500; i++){
+						h = abs(pos.y - getFloorBumps(pos));
+						if (d > 10000.0 || h < 0.0) break;
+						d += h * 0.5;
+						pos += dir * h * 0.5; 
+					}
+
+					//if (h > WATER_WAVE_AMP) return t;
+
+					if (d < t && pos.z < 0.0 && pos.x > -150.0 && pos.x < 1549.6){
+						float eps = 1.0;
+						t = d;
+						hitWorldSpace = pos;
+						float dy = getFloorBumps(hitWorldSpace - vec3(0,eps,0)) - getFloorBumps(hitWorldSpace + vec3(0,eps,0));
+						float dx = getFloorBumps(hitWorldSpace - vec3(eps,0,0)) - getFloorBumps(hitWorldSpace + vec3(eps,0,0));
+						float dz = getFloorBumps(hitWorldSpace - vec3(0,0,eps)) - getFloorBumps(hitWorldSpace + vec3(0,0,eps));
+										
+						intersec.normal = normalize(vec3(dx,dy,dz));
+						intersec.emission = vec3(0);
+						intersec.color = vec3(0.1, 0.2, 0.4);
+						intersec.type = REFR;
+					}
+
+
+					return t;
+				}
+				else{
+					for(int i = 0; i < 500; i++){
+						h = abs(pos.y - getWaterWaveHeight(pos));
+						if (d > 10000.0 || h < 1.0) break;
+						d += h * 0.5;
+						pos += dir * h * 0.5; 
+					}
+									
+					if (h > WATER_WAVE_AMP) return t;
+
+					if (d < t && pos.z < 0.0 && pos.x > -150.0 && pos.x < 1549.6){
+						float eps = 1.0;
+						t = d;
+						hitWorldSpace = pos;
+						float dx = getWaterWaveHeight(hitWorldSpace - vec3(eps,0,0)) - getWaterWaveHeight(hitWorldSpace + vec3(eps,0,0));
+						float dy = eps * 2.0; // (the water wave height is a function of x and z, not dependent on y)
+						float dz = getWaterWaveHeight(hitWorldSpace - vec3(0,0,eps)) - getWaterWaveHeight(hitWorldSpace + vec3(0,0,eps));
+										
+						intersec.normal = normalize(vec3(dx,dy,dz));
+						intersec.emission = vec3(0);
+						intersec.color = vec3(0.6, 1.0, 1.0);
+						intersec.type = REFR;
+					}
+
+
+					return t;
+				}
+
+
+
+			}
+
+			vec3 calcDirectLightingQuad(vec3 mask, vec3 x, vec3 nl, Quad light, inout float seed)
+			{
+				vec3 dirLight = vec3(0.0);
+				Intersection shadowIntersec;
+				vec3 randPointOnLight;
+				randPointOnLight.x = mix(light.v0.x, light.v1.x, rand(seed));
+				randPointOnLight.y = light.v0.y;
+				randPointOnLight.z = mix(light.v0.z, light.v3.z, rand(seed));
+				vec3 srDir = normalize(randPointOnLight - x);
+				float nlDotSrDir = max(dot(nl, srDir), 0.01);
+					
+				// cast shadow ray from intersection point	
+				Ray shadowRay = Ray(x, srDir);
+				shadowRay.origin += nl * 15.0; // larger dimensions of this scene require greater offsets
+				float st = SceneIntersect(shadowRay, shadowIntersec, false);
+				if ( shadowIntersec.type == LIGHT )
+				{
+					float r2 = distance(light.v0, light.v1) * distance(light.v0, light.v3);
+					vec3 d = randPointOnLight - shadowRay.origin;
+					float d2 = dot(d, d);
+					float weight = dot(-srDir, normalize(shadowIntersec.normal)) * r2 / d2;
+					dirLight = mask * light.emission * nlDotSrDir * clamp(weight, 0.0, 1.0);
+				}
+
+				return dirLight;
+			}
+
+			//-----------------------------------------------------------------------
+			vec3 CalculateRadiance( Ray r, inout float seed )
+			//-----------------------------------------------------------------------
+			{
+				vec3 accumCol = vec3(0.0);
+				vec3 mask = vec3(1.0);
+			    Intersection intersec;
+				int sampleDiffuseBudget = 1;
+				
+				bool checkWater = true;
+
+				vec3 checkCol0 = vec3(0.01);
+				vec3 checkCol1 = vec3(1.0);
+				
+			    for (int depth = 0; depth < 4; depth++)
+				{
+					
+					float t = SceneIntersect(r, intersec, checkWater);
+
+					if (t == INFINITY)
+					{
+			            break;
+					}
+					
+					// if we reached something bright, don't spawn any more rays
+					if (intersec.type == LIGHT)
+					{
+						break;
+					}
+					
+					// useful data 
+					vec3 n = intersec.normal;
+			        vec3 nl = dot(n,r.direction) <= 0.0 ? normalize(n) : normalize(n * -1.0);
+					vec3 x = r.origin + r.direction * t;
+					
+					    
+			        if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+			        {
+						//mask *= intersec.color;
+						accumCol = calcDirectLightingQuad(mask, x, nl, quads[5], seed);
+						
+						
+						sampleDiffuseBudget -= 1;
+						if (sampleDiffuseBudget < 0) break;
+						
+						continue;	
+			         }//end if (intersec.type == DIFF)
+
+					if (intersec.type == CHECK)  // Diffuse object underneath with ClearCoat on top
+					{	
+						
+						//vec2 uv = vec2((150.0 + x.x) / 400.0, (x.z - 150.0) / 400.0);
+						//intersec.color *= texture2D(tFloorTexture, uv).rgb;
+						float q = clamp( mod( dot( floor(x.xz * 0.02), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
+						intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
+
+						mask *= intersec.color;
+						accumCol = calcDirectLightingQuad(mask, x, nl, quads[5], seed);		
+							
+						continue;	
+							
+					} //end if (intersec.type == CHECK)
+
+			        if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+					{
+						checkWater = false;
+
+						float nc = 1.0; // IOR of air
+						float nt = 1.33; // IOR of water
+						float nnt = dot(r.direction, n) <= 0.0 ? (nc / nt) : (nt / nc); // Ray from outside going in?
+						vec3 tdir = refract(r.direction, nl, nnt);
+							
+						// Original Fresnel equations
+						float cosThetaInc = dot(nl, r.direction);
+						float cosThetaTra = dot(nl, tdir);
+						float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
+						float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
+						float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
+
+						//if (rand(seed) < Re) // reflect ray from surface
+						//{
+						//	r = Ray( x, reflect(r.direction, nl) );
+						 //   	r.origin += r.direction * 2.0;
+						//	
+						 //   	continue;	
+						//}
+						//else // transmit ray through surface
+						//{
+							mask *= intersec.color;
+							r = Ray(x, tdir);
+							r.origin += r.direction * 2.0;
+							continue;
+						//}
+						
+					} // end if (intersec.type == REFR)
+					
+				} // end for (int depth = 0; depth < 4; depth++)
+				
+				return accumCol;      
+			}
+
+
+			//-----------------------------------------------------------------------
+			void SetupScene(void)
+			//-----------------------------------------------------------------------
+			{
+				vec3 z  = vec3(1);// No color value, Black        
+				vec3 L1 = vec3(0.736507, 0.642866, 0.330431) * 15.0;// Bright Yellowish light
+					    // 0.736507, 0.642866, 0.210431  Original values
+				
+				//quads[0] = Quad( vec3(  0.0,   0.0,-559.2), vec3(549.6,   0.0,-559.2), vec3(549.6, 548.8,-559.2), vec3(  0.0, //548.8,-559.2),  z, vec3( 1 ),  DIFF);// Back Wall
+				//quads[1] = Quad( vec3(  0.0,   0.0,   0.0), vec3(  0.0,   0.0,-559.2), vec3(  0.0, 548.8,-559.2), vec3(  0.0, 548.8,   //0.0),  z, vec3( 1),  DIFF);// Left Wall
+				//quads[2] = Quad( vec3(549.6,   0.0,-559.2), vec3(549.6,   0.0,   0.0), vec3(549.6, 548.8,   0.0), vec3(549.6, //548.8,-559.2),  z, vec3( 1 ),  DIFF);// Right Wall
+				
+
+				//quads[3] = Quad( vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, vec3( 1 ),  DIFF);// Ceiling
+				quads[4] = Quad( vec3(  -150.0,   0.0,   0.0), vec3(1549.6,   0.0,   0.0), vec3(1549.6,   0.0,-1559.2), vec3(  -150.0,   0.0,-1559.2),  z, vec3( 1 ),  CHECK);// Floor
+				// Rectangular Area Light
+				quads[5] = Quad( vec3(100.0, 1548.0,-500.0), vec3(500.0, 1548.0,-500.0), vec3(500.0, 1548.0,-100.0), vec3(100.0, 1548.0,-100.0), L1, z, LIGHT);// Area Light Quad in ceiling
+				
+			}	
+
+			void main( void )
+			{
+				vec3 camPos     = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
+				
+				vec3 camRight   = vec3(0.9,-0,-0.0 );//(uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
+				vec3 camUp      = vec3(0.04,0.2,-1);//(uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
+				vec3 camForward = vec3(-0.028,-0.82,-0.57);//(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
+
+
+				
+				// seed for rand() function
+				float seed = mod(uSampleCounter,1000.0) * uRandomVector.x - uRandomVector.y + uResolution.y * gl_FragCoord.x / uResolution.x + uResolution.x * gl_FragCoord.y / uResolution.y;
+				
+				float r1 = 2.0 * rand(seed);
+				float r2 = 2.0 * rand(seed);
+				
+				vec2 pixelPos = vec2(0);
+				vec2 offset = vec2(0);
+				
+				//if ( !uCameraIsMoving ) 
+				{
+					offset.x = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
+					offset.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
+				}
+				
+				offset /= (uResolution);
+				pixelPos = (2.0 * (vUv + offset) - 1.0);
+				vec3 rayDir = normalize( pixelPos.x * camRight * uULen + pixelPos.y * camUp * uVLen + camForward );
+				
+				// depth of field
+				vec3 focalPoint = uFocusDistance * rayDir;
+				float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
+				float randomRadius = rand(seed) * uApertureSize;
+				vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
+				// point on aperture to focal point
+				vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
+
+				Ray ray = Ray( camPos + randomAperturePos, finalRayDir );
+
+				SetupScene(); 
+
+				// perform path tracing and get resulting pixel color
+				vec3 pixelColor = CalculateRadiance( ray, seed );
+				
+				vec3 previousColor = texture2D(tPreviousTexture, vUv).rgb;
+				
+				
+				previousColor *= 0.9; // motion-blur trail amount (old image)
+				pixelColor *= 0.1; // brightness of new image (noisy)
+				
+				
+				gl_FragColor = vec4( pixelColor + previousColor, 1.0 );	
+			}
+		</script>
+		
+		<script>
+			
+			var SCREEN_WIDTH;
+			var SCREEN_HEIGHT;
+			var container;
+			var controls;
+			var pathTracingScene, screenTextureScene, screenOutputScene;
+			var pathTracingUniforms, screenTextureUniforms, screenOutputUniforms;
+			var pathTracingDefines;
+			var pathTracingGeometry, pathTracingMaterial, pathTracingMesh;
+			var screenTextureGeometry, screenTextureMaterial, screenTextureMesh;
+			var screenOutputGeometry, screenOutputMaterial, screenOutputMesh;
+			var pathTracingRenderTarget, screenOutputRenderTarget;
+			var quadCamera, worldCamera;
+			var renderer, clock;
+			var frameTime, elapsedTime;
+			var fovScale;
+			var apertureSize = 0.0;
+			var focusDistance = 1180.0;
+			var pixelRatio = 0.5;
+			var TWO_PI = Math.PI * 2;
+			var randomVector = new THREE.Vector3();
+			var sampleCounter = 1.0;
+			var camFlightSpeed = 300;
+			var fontAspect;
+			var floorTexture;
+			var checker = 1;
+			
+			// the following variables will be used to calculate rotations and directions from the camera
+			var cameraControlsObject;//for positioning and moving the camera itself
+			var cameraControlsYawObject;//allows access to control camera's left/right movements through mobile input
+			var cameraControlsPitchObject;//allows access to control camera's up/down movements through mobile input
+
+			var PI_2 = Math.PI / 2;//used by controls below
+			
+			init();
+			
+			function init() {
+				
+				renderer = new THREE.WebGLRenderer({
+    						preserveDrawingBuffer: true 
+							});;
+				renderer.autoClear = false;
+				// 1 is full resolution, 0.5 is half, 0.25 is quarter, etc. (must be > than 0.0)
+				renderer.setPixelRatio(pixelRatio);
+				renderer.setSize( window.innerWidth, window.innerHeight );
+				renderer.context.getExtension('OES_texture_float');
+				
+				container = document.getElementById( 'container' );
+				container.appendChild( renderer.domElement );
+				
+				window.addEventListener( 'resize', onWindowResize, false );
+				
+				clock = new THREE.Clock();
+				
+				pathTracingScene = new THREE.Scene();
+				screenTextureScene = new THREE.Scene();
+				screenOutputScene = new THREE.Scene();
+				
+				// quadCamera is simply the camera to help render the full screen quad (2 triangles),
+				// hence the name.  It is an Orthographic camera that sits facing the view plane, which serves as
+				// the window into our 3d world. This camera will not move or rotate for the duration of the app.
+				quadCamera = new THREE.OrthographicCamera( -1, 1, 1, -1, 1, 1 );
+				screenTextureScene.add(quadCamera);
+				screenOutputScene.add(quadCamera);
+				
+				// worldCamera is the dynamic camera 3d object that will be positioned, oriented and 
+				// constantly updated inside the 3d scene.  Its view will ultimately get passed back to the 
+				// stationary quadCamera, which renders the scene to a fullscreen quad (made up of 2 large triangles).
+				worldCamera = new THREE.PerspectiveCamera(30, window.innerWidth / window.innerHeight, 1, 1000);
+				//new THREE.OrthographicCamera( -window.innerWidth , window.innerWidth, window.innerHeight, -window.innerHeight, 1, 1000 );//
+				pathTracingScene.add(worldCamera);
+				
+				controls = new FirstPersonCameraControls( worldCamera );
+							
+				cameraControlsObject = controls.getObject();
+				cameraControlsYawObject = controls.getYawObject();
+				cameraControlsPitchObject = controls.getPitchObject();
+				
+				pathTracingScene.add( cameraControlsObject );
+
+				// for flyCam
+				cameraControlsObject.position.set(300, 700, 200);
+				cameraControlsYawObject.rotation.y = -0.0;
+				// look slightly downward
+				cameraControlsPitchObject.rotation.x = -1;
+				
+				pathTracingRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
+					minFilter: THREE.NearestFilter,
+					magFilter: THREE.NearestFilter,
+					format: THREE.RGBAFormat,
+					type: THREE.FloatType,
+					depthBuffer: false,
+					stencilBuffer: false
+				} );
+				pathTracingRenderTarget.texture.generateMipmaps = false;
+				
+				screenTextureRenderTarget = new THREE.WebGLRenderTarget( (window.innerWidth * pixelRatio), (window.innerHeight * pixelRatio), {
+					minFilter: THREE.NearestFilter, 
+					magFilter: THREE.NearestFilter,
+					format: THREE.RGBAFormat,
+					type: THREE.FloatType,
+					depthBuffer: false,
+					stencilBuffer: false
+				} );
+				screenTextureRenderTarget.texture.generateMipmaps = false;
+
+				//floorTexture = new THREE.TextureLoader().load( 'tile.png' );
+				//floorTexture.wrapS = THREE.RepeatWrapping;
+				//floorTexture.wrapT = THREE.RepeatWrapping;
+				//floorTexture.minFilter = THREE.LinearFilter; 
+				//floorTexture.magFilter = THREE.LinearFilter;
+				//floorTexture.generateMipmaps = false;
+				
+				pathTracingGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+
+				pathTracingUniforms = {
+					
+					tPreviousTexture: { type: "t", value: screenTextureRenderTarget.texture },
+					
+					uTime: { type: "f", value: 0.0 },
+					uSampleCounter: { type: "f", value: 0.0 },
+					uULen: { type: "f", value: 1.0 },
+					uVLen: { type: "f", value: 1.0 },
+					uApertureSize: { type: "f", value: 0.0 },
+					uFocusDistance: { type: "f", value: 1180.0 },
+					//tFloorTexture: { type: "t", value: floorTexture },
+					
+					uResolution: { type: "v2", value: new THREE.Vector2() },
+					
+					uRandomVector: { type: "v3", value: new THREE.Vector3() },
+				
+					uCameraMatrix: { type: "m4", value: new THREE.Matrix4() },
+	
+				};
+				
+				pathTracingMaterial = new THREE.ShaderMaterial( {
+					uniforms: pathTracingUniforms,
+					//defines: pathTracingDefines,
+					vertexShader: document.getElementById( 'pathTracingVertexShader' ).textContent,
+					fragmentShader: document.getElementById( 'pathTracingFragmentShader' ).textContent,
+				        depthTest: false,
+                                        depthWrite: false
+                                } );
+
+				pathTracingMesh = new THREE.Mesh( pathTracingGeometry, pathTracingMaterial );
+				pathTracingScene.add( pathTracingMesh );
+				
+				
+				
+				// the following keeps the large scene ShaderMaterial quad right in front 
+				//   of the camera at all times. This is necessary because without it, the scene 
+				//   quad will fall out of view and get clipped when the camera rotates past 180 degrees.
+				worldCamera.add( pathTracingMesh );
+				
+				
+				
+				screenTextureGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+				
+				screenTextureMaterial = new THREE.ShaderMaterial( {
+					uniforms: screenTextureShader.uniforms,
+					vertexShader: screenTextureShader.vertexShader,
+					fragmentShader: screenTextureShader.fragmentShader,
+					depthWrite: false,
+					depthTest: false
+				} );
+				
+				screenTextureMaterial.uniforms.tTexture0.value = pathTracingRenderTarget.texture;
+				
+				screenTextureMesh = new THREE.Mesh(screenTextureGeometry, screenTextureMaterial);
+				screenTextureScene.add(screenTextureMesh);
+				
+				
+				
+				screenOutputGeometry = new THREE.PlaneBufferGeometry( 2, 2 );
+				
+				screenOutputMaterial = new THREE.ShaderMaterial( {
+					uniforms: screenOutputShader.uniforms,
+					vertexShader: screenOutputShader.vertexShader,
+					fragmentShader: screenOutputShader.fragmentShader,
+					depthWrite: false,
+					depthTest: false
+				} );
+				
+				screenOutputMaterial.uniforms.tTexture0.value = pathTracingRenderTarget.texture;
+				
+				screenOutputMesh = new THREE.Mesh(screenOutputGeometry, screenOutputMaterial);
+				screenOutputScene.add(screenOutputMesh);
+				
+				// onWindowResize() must be at the end of the init() function
+				onWindowResize();
+				
+				// everything is set up, now we can start animating
+				animate();
+				
+			} // end function init()
+			
+			
+			
+			function onWindowResize( event ) {
+				
+				SCREEN_WIDTH = window.innerWidth;
+				SCREEN_HEIGHT = window.innerHeight;
+				
+				renderer.setPixelRatio(pixelRatio);
+				renderer.setSize( SCREEN_WIDTH, SCREEN_HEIGHT );
+				
+				fontAspect = (SCREEN_WIDTH / 175) * (SCREEN_HEIGHT / 200);
+				if (fontAspect > 25) fontAspect = 25;
+				if (fontAspect < 4) fontAspect = 4;
+				fontAspect *= 2;
+				
+				pathTracingUniforms.uResolution.value.x = renderer.context.drawingBufferWidth;
+				pathTracingUniforms.uResolution.value.y = renderer.context.drawingBufferHeight;
+				
+				pathTracingRenderTarget.setSize( renderer.context.drawingBufferWidth, renderer.context.drawingBufferHeight );
+				screenTextureRenderTarget.setSize( renderer.context.drawingBufferWidth, renderer.context.drawingBufferHeight );
+				
+				worldCamera.aspect = renderer.domElement.clientWidth / renderer.domElement.clientHeight;
+				worldCamera.updateProjectionMatrix();
+				
+				// the following scales all scene objects by the worldCamera's field of view,
+				// taking into account the screen aspect ratio and multiplying the uniform uULen,
+				// the x-coordinate, by this ratio
+				fovScale = worldCamera.fov * 0.5 * (Math.PI / 180.0);
+				pathTracingUniforms.uVLen.value = Math.tan(fovScale);
+				pathTracingUniforms.uULen.value = pathTracingUniforms.uVLen.value * worldCamera.aspect;
+				
+			} // end function onWindowResize( event )
+			
+			
+			
+			function animate() {
+				
+				requestAnimationFrame( animate );
+				
+				frameTime = clock.getDelta();
+				
+				elapsedTime = clock.getElapsedTime() % 1000;
+				
+				pathTracingUniforms.uTime.value = elapsedTime;
+				pathTracingUniforms.uSampleCounter.value = sampleCounter;
+				pathTracingUniforms.uRandomVector.value = randomVector.set( Math.random(), Math.random(), Math.random() );
+				// CAMERA		
+				pathTracingUniforms.uCameraMatrix.value.copy( worldCamera.matrixWorld );
+				screenOutputMaterial.uniforms.uOneOverSampleCounter.value = 1.0 / sampleCounter;
+				
+				// RENDERING in 3 steps
+				
+				// STEP 1
+				// Perform PathTracing and Render(save) into pathTracingRenderTarget
+				// Read previous screenTextureRenderTarget to use as a new starting point to blend with
+				renderer.render( pathTracingScene, worldCamera, pathTracingRenderTarget );	
+				
+				// STEP 2
+				// Render(copy) the final pathTracingScene output(above) into screenTextureRenderTarget
+				// This will be used as a new starting point for Step 1 above
+				renderer.render( screenTextureScene, quadCamera, screenTextureRenderTarget );
+				
+				// STEP 3
+				// Render full screen quad with generated pathTracingRenderTarget in STEP 1 above.
+				// After the image is gamma corrected, it will be shown on the screen as the final accumulated output
+				renderer.render( screenOutputScene, quadCamera );
+
+					/* Auto Download of canvas context after every 10 sec */
+					var imgData, imgNode;
+					 
+   					if(Math.round(elapsedTime) % 10 == 0 && Math.round(elapsedTime) !=checker ){
+   						 checker = Math.round(elapsedTime);
+   						try {
+        					imgData = renderer.domElement.toDataURL();      
+        					console.log(imgData);
+    					} 
+    					catch(e) {
+        					console.log("Browser does not support taking screenshot of 3d context");
+        					return;
+    					}
+
+    					var link = document.createElement('a');
+						link.download = "test.png";
+						link.href = imgData;
+						link.click();
+   					}  	
+				}// end function animate()
+
+		</script>
+
+	</body>
+</html>
