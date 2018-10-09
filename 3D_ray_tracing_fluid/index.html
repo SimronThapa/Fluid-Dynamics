@@ -48,6 +48,27 @@ scale=1">         <style>
 				gl_Position = vec4( position, 1.0 );
 			}
 		</script>
+
+		<script id="naiverStokesVertexShader" type="x-shader/x-vertex">
+			precision highp float;
+    		precision mediump sampler2D;
+    		attribute vec2 aPosition;
+    		
+    		varying vec2 vUv;
+    		//varying vec2 vL;
+    		//varying vec2 vR;
+    		//varying vec2 vT;
+    		//varying vec2 vB;
+    		uniform vec2 texelSize;
+    		void main () {
+        		vUv = aPosition * 0.5 + 0.5;
+        		//vL = vUv - vec2(texelSize.x, 0.0);
+        		//vR = vUv + vec2(texelSize.x, 0.0);
+        		//vT = vUv + vec2(0.0, texelSize.y);
+        		//vB = vUv - vec2(0.0, texelSize.y);
+        		gl_Position = vec4(aPosition, 0.0, 1.0);
+    		}
+		</script>
 		
 		<script id="pathTracingFragmentShader" type="x-shader/x-fragment">
 			//Perlin Noise Start
@@ -222,9 +243,6 @@ scale=1">         <style>
 
 			#define N_QUADS 6
 
-
-			//-----------------------------------------------------------------------
-
 			struct Ray { vec3 origin; vec3 direction; };
 			struct Quad { vec3 v0; vec3 v1; vec3 v2; vec3 v3; vec3 emission; vec3 color; int type; };
 			struct Intersection { vec3 normal; vec3 emission; vec3 color; int type; };
@@ -234,7 +252,6 @@ scale=1">         <style>
 			#include <pathtracing_random_functions>
 
 			#include <pathtracing_triangle_intersect>
-
 
 			//----------------------------------------------------------------------------
 			float QuadIntersect( vec3 v0, vec3 v1, vec3 v2, vec3 v3, Ray r )
@@ -247,6 +264,23 @@ scale=1">         <style>
 
 			#define STILL_WATER_LEVEL 	50.0
 			#define WATER_WAVE_AMP 		2.0
+
+
+			//--------------Advection - Naiver Stokes--------------------------------
+			//precision highp float;
+   			//precision mediump sampler2D;
+    		//varying vec2 vUv;
+    		//uniform sampler2D uVelocity;
+    		//uniform sampler2D uSource;
+    		//uniform vec2 texelSize;
+    		//uniform float dt;
+    		//uniform float dissipation;
+    		//void advection (vec2 vv, float dt, vec2 texelSize, float dissipation) {
+        	//	vec2 coord = vUv - dt * texture2D(uVelocity, vUv).xy * texelSize;
+        	//	vec3 advecColor;
+        	//	advecColor = (dissipation * texture2D(tFloorTexture, coord),1.0);
+    		//}
+			//-----------------------------------------------------------------------
 
 
 			float getWaterWaveHeight( vec3 pos )
@@ -441,7 +475,7 @@ scale=1">         <style>
 			        if (intersec.type == DIFF) // Ideal DIFFUSE reflection
 			        {
 						//mask *= intersec.color;
-						accumCol = calcDirectLightingQuad(mask, x, nl, quads[5], seed);
+						accumCol = vec3(0.0);//calcDirectLightingQuad(mask, x, nl, quads[5], seed);
 						
 						
 						sampleDiffuseBudget -= 1;
@@ -518,7 +552,7 @@ scale=1">         <style>
 				
 
 				//quads[3] = Quad( vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, vec3( 1 ),  DIFF);// Ceiling
-				quads[4] = Quad( vec3(  -150.0,   0.0,   0.0), vec3(1549.6,   0.0,   0.0), vec3(1549.6,   0.0,-1559.2), vec3(  -150.0,   0.0,-1559.2),  z, vec3( 1 ),  CHECK);// Floor
+				quads[4] = Quad( vec3(  -250.0,   0.0,   0.0), vec3(1549.6,   0.0,   0.0), vec3(1549.6,   0.0,-1559.2), vec3(  -250.0,   0.0,-1559.2),  z, vec3( 1 ),  CHECK);// Floor
 				// Rectangular Area Light
 				quads[5] = Quad( vec3(100.0, 1548.0,-500.0), vec3(500.0, 1548.0,-500.0), vec3(500.0, 1548.0,-100.0), vec3(100.0, 1548.0,-100.0), L1, z, LIGHT);// Area Light Quad in ceiling
 				
@@ -843,6 +877,13 @@ scale=1">         <style>
 				// Render full screen quad with generated pathTracingRenderTarget in STEP 1 above.
 				// After the image is gamma corrected, it will be shown on the screen as the final accumulated output
 				renderer.render( screenOutputScene, quadCamera );
+
+				// var imgData;
+				// if(elapsedTime % 5 == 0){
+				// 	imgData = renderer.domElement.toDataURL();
+				// 	console.log(imgData);
+				
+				// } 
 
 					/* Auto Download of canvas context after every 10 sec */
 					var imgData, imgNode;
