@@ -213,6 +213,7 @@ static void LoadFloorAsset() {
           -10.0f,-10.0f, 1.0f,   1.0f, 0.0f,   0.0f, 0.0f, 1.0f,
            90.0f,-10.0f, 1.0f,   0.0f, 0.0f,   0.0f, 0.0f, 1.0f,
           -10.0f, 90.0f, 1.0f,   1.0f, 1.0f,   0.0f, 0.0f, 1.0f,
+        
            90.0f,-10.0f, 1.0f,   0.0f, 0.0f,   0.0f, 0.0f, 1.0f,
            90.0f, 90.0f, 1.0f,   0.0f, 1.0f,   0.0f, 0.0f, 1.0f,
           -10.0f, 90.0f, 1.0f,   1.0f, 1.0f,   0.0f, 0.0f, 1.0f,
@@ -339,7 +340,7 @@ static void LoadGridAsset() {
     gGrid.shaders = LoadShaders("grid-vertex-shader.txt", "grid-fragment-shader.txt");
     gGrid.drawType = GL_TRIANGLES;
     gGrid.drawStart = 0;
-    gGrid.drawCount = 1*100*100*3;//6*2*3;// //100 * 100 unit grids and each grid unit call has 32 (4*(x,y,z,u,v,nx,ny,nz)) floating point values
+    gGrid.drawCount = 1*100*100*2*3;//1 face (2D) has 100*100 grid, each grid has 2 triangles and each triangle has 3 coordinate values
     gGrid.texture = LoadTexture("blue.jpg");
     glGenBuffers(1, &gGrid.vbo);
     glGenVertexArrays(1, &gGrid.vao);
@@ -352,15 +353,26 @@ static void LoadGridAsset() {
     
     // Make a cube out of triangles (two triangles per side)
     std::list<GLfloat> gridData = computeGridData();
-    int index = 0;
+    int index = 1;
     for (std::list<GLfloat>::iterator it = gridData.begin(); it != gridData.end(); ++it){
-        vertexData[index] = *it;
-        //std::cout<<*it<<"\n";
+        vertexData[index-1] = *it;
+        std::cout<<vertexData[index-1];
+        if(index %8 ==0 && index !=0){
+            std::cout<<"\n";
+        }else{
+            std::cout<<",";
+        }
         index++;
     }
+    
+    //for (int i = 0; i <=100*100*2*3+1; i++){
+    //std::cout<<vertexData[i+i*8]<<","<<vertexData[i+1+i*8]<<","<<vertexData[i+2+i*8]<<","<<vertexData[i+3+i*8]<<","<<vertexData[i+4+i*8]<<","<<vertexData[i+5+i*8]<<","<<vertexData[i+6+i*8]<<","<<vertexData[i+7+i*8]<<"\n";
+    //}
+    
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
     
     // connect the xyz to the "vert" attribute of the vertex shader
+    //(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void* pointer);
     glEnableVertexAttribArray(gGrid.shaders->attrib("vert"));
     glVertexAttribPointer(gGrid.shaders->attrib("vert"), 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), NULL);
     
@@ -398,14 +410,14 @@ static void CreateInstances() {
 
      ModelInstance grid;
      grid.asset = &gGrid;
-     grid.transform = translate(-10,-10,0) * scale(1,2,1);
+    grid.transform = translate(-10,-10,0);
      gInstances.push_back(grid);
 
-     std::cout<<"advect start \n";
-     ModelInstance advect;
-     advect.asset = &gAdvect;
-     advect.transform = translate(-10,-10,0) * scale(1,2,1);
-     gInstances.push_back(advect);
+     //std::cout<<"advect start \n";
+    // ModelInstance advect;
+    // advect.asset = &gAdvect;
+    //advect.transform = translate(-10,-10,0);
+    // gInstances.push_back(advect);
 //
 //    ModelInstance hRight;
 //    hRight.asset = &gWoodenCrate;
@@ -551,7 +563,7 @@ void AppMain() {
     // initialise the gWoodenCrate asset
     LoadFloorAsset();
     LoadGridAsset();
-    LoadAdvectAsset();
+    //LoadAdvectAsset();
 
     // create all the instances in the 3D scene based on the gWoodenCrate asset
     CreateInstances();
