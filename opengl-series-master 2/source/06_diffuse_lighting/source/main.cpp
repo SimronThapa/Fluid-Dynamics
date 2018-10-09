@@ -364,30 +364,28 @@ static void LoadGridAsset() {
         }
         index++;
     }
-    
-    //for (int i = 0; i <=100*100*2*3+1; i++){
-    //std::cout<<vertexData[i+i*8]<<","<<vertexData[i+1+i*8]<<","<<vertexData[i+2+i*8]<<","<<vertexData[i+3+i*8]<<","<<vertexData[i+4+i*8]<<","<<vertexData[i+5+i*8]<<","<<vertexData[i+6+i*8]<<","<<vertexData[i+7+i*8]<<"\n";
-    //}
-    
+
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertexData), vertexData, GL_STATIC_DRAW);
     
     // connect the xyz to the "vert" attribute of the vertex shader
     //(GLuint index, GLint size, GLenum type, GLboolean normalized, GLsizei stride, const void* pointer);
+    std::cout<<"vert: "<<gGrid.shaders->attrib("vert")<<"\n";
     glEnableVertexAttribArray(gGrid.shaders->attrib("vert"));
     glVertexAttribPointer(gGrid.shaders->attrib("vert"), 3, GL_FLOAT, GL_FALSE, 8*sizeof(GLfloat), NULL);
     
     // connect the uv coords to the "vertTexCoord" attribute of the vertex shader
+    std::cout<<"vertTexCoord: "<<gGrid.shaders->attrib("vertTexCoord")<<"\n";
     glEnableVertexAttribArray(gGrid.shaders->attrib("vertTexCoord"));
     glVertexAttribPointer(gGrid.shaders->attrib("vertTexCoord"), 2, GL_FLOAT, GL_TRUE,  8*sizeof(GLfloat), (const GLvoid*)(3 * sizeof(GLfloat)));
     
     // connect the normal to the "vertNormal" attribute of the vertex shader
+    std::cout<<"vertNormal: "<<gGrid.shaders->attrib("vertNormal")<<"\n";
     glEnableVertexAttribArray(gGrid.shaders->attrib("vertNormal"));
     glVertexAttribPointer(gGrid.shaders->attrib("vertNormal"), 3, GL_FLOAT, GL_TRUE,  8*sizeof(GLfloat), (const GLvoid*)(5 * sizeof(GLfloat)));
     
     // unbind the VAO
     glBindVertexArray(0);
 }
-
 
 // convenience function that returns a translation matrix
 glm::mat4 translate(GLfloat x, GLfloat y, GLfloat z) {
