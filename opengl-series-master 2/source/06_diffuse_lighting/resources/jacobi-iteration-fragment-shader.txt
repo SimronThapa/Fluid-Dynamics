@@ -1,0 +1,33 @@
+#version 150
+
+uniform sampler2D Divergence;
+uniform sampler2D OldPressure;
+uniform vec2 InverseGridSize;
+
+in vec2 fragTexCoord;
+
+out vec4 finalColor;
+
+float samplePressure(vec2 pos)
+{
+    // Boundary condition: Vanish for right wall, wrap for everything else (automatically by texture sampler).
+    if(pos.x > 1.0 - InverseGridSize.x * 2.0)
+    return 0.0;
+
+    vec2 toCenter = vec2(0.2, 0.5) - fragTexCoord;
+    toCenter.x *= InverseGridSize.y / InverseGridSize.x;
+    if(dot(toCenter, toCenter) < 0.002)
+        return 0.0;
+    else
+        return texture2D(OldPressure, pos).x;
+}
+
+void main(void)
+{
+    float div = texture2D(Divergence, fragTexCoord).x;
+    float x0 = samplePressure(fragTexCoord - vec2(InverseGridSize.x, 0));
+    float x1 = samplePressure(fragTexCoord + vec2(InverseGridSize.x, 0));
+    float y0 = samplePressure(fragTexCoord - vec2(0, InverseGridSize.y));
+    float y1 = samplePressure(fragTexCoord + vec2(0, InverseGridSize.y));
+    finalColor = vec4((x0 + x1 + y0 + y1 - div) * 0.25, 0, 0, 0);
+}

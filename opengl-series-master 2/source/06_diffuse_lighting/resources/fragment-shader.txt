@@ -1,0 +1,69 @@
+#version 150
+
+uniform mat4 model;
+uniform sampler2D tex;
+
+uniform struct Light {
+   vec3 position;
+   vec3 intensities; //a.k.a the color of the light
+} light;
+
+in vec2 fragTexCoord;
+in vec3 fragNormal;
+in vec3 fragVert;
+in vec2 u_resolution;
+
+out vec4 finalColor;
+
+vec2 random2(vec2 st){
+    st = vec2( dot(st,vec2(127.1,311.7)),
+    dot(st,vec2(269.5,183.3)) );
+    return -1.0 + 2.0*fract(sin(st)*43758.5453123);
+}
+
+// Value Noise by Inigo Quilez - iq/2013
+// https://www.shadertoy.com/view/lsf3WH
+float noise(vec2 st) {
+    vec2 i = floor(st);
+    vec2 f = fract(st);
+
+    vec2 u = f*f*(3.0-2.0*f);
+
+    return mix( mix( dot( random2(i + vec2(0.0,0.0) ), f - vec2(0.0,0.0) ),
+    dot( random2(i + vec2(1.0,0.0) ), f - vec2(1.0,0.0) ), u.x),
+    mix( dot( random2(i + vec2(0.0,1.0) ), f - vec2(0.0,1.0) ),
+    dot( random2(i + vec2(1.0,1.0) ), f - vec2(1.0,1.0) ), u.x), u.y);
+}
+
+void main() {
+    //calculate normal in world coordinates
+    mat3 normalMatrix = transpose(inverse(mat3(model)));
+    vec3 normal = normalize(normalMatrix * fragNormal);
+    
+    //calculate the location of this fragment (pixel) in world coordinates
+    vec3 fragPosition = vec3(model * vec4(fragVert, 1));
+    
+    //calculate the vector from this pixels surface to the light source
+    vec3 surfaceToLight = light.position - fragPosition;
+
+    //calculate the cosine of the angle of incidence
+    float brightness = dot(normal, surfaceToLight) / (length(surfaceToLight) * length(normal));
+    brightness = clamp(brightness, 0, 1);
+
+    //calculate final color of the pixel, based on:
+    // 1. The angle of incidence: brightness
+    // 2. The color/intensities of the light: light.intensities
+    // 3. The texture and texture coord: texture(tex, fragTexCoord)
+    vec4 surfaceColor = texture(tex, fragTexCoord);
+
+    vec2 st = fragTexCoord.xy/u_resolution.xy;
+    st.x *= u_resolution.x/u_resolution.y;
+    vec3 color = vec3(0.0);
+
+    vec2 pos = vec2(st*10.0);
+
+    color = vec3( noise(pos)*.5+.5 );
+
+   // surfaceColor = vec4(color,1.0);
+    finalColor = vec4(brightness * light.intensities * surfaceColor.rgb, surfaceColor.a);
+}

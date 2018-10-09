@@ -1,0 +1,20 @@
+#version 150
+
+uniform sampler2D OldVelocity;
+uniform sampler2D Pressure;
+uniform vec2 InverseGridSize;
+
+in vec2 fragTexCoord;
+
+out vec4 finalColor;
+
+void main(void)
+{
+    float x0 = texture2D(Pressure, fragTexCoord - vec2(InverseGridSize.x, 0)).x;
+    float x1 = texture2D(Pressure, fragTexCoord + vec2(InverseGridSize.x, 0)).x;
+    float y0 = texture2D(Pressure, fragTexCoord - vec2(0, InverseGridSize.y)).x;
+    float y1 = texture2D(Pressure, fragTexCoord + vec2(0, InverseGridSize.y)).x;
+    vec2 pressureGradient = (vec2(x1, y1) - vec2(x0, y0));
+    vec2 oldV = texture2D(OldVelocity, fragTexCoord).xy;
+    finalColor = vec4(oldV - pressureGradient * 0.5, 1.0, 1.0);
+}
