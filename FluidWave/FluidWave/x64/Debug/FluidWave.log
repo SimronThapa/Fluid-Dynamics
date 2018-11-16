@@ -1,0 +1,6 @@
+﻿  wave.c
+c:\users\sthapa5\source\repos\fluidwave\fluidwave\wave.c(160): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\sthapa5\source\repos\fluidwave\fluidwave\wave.c(176): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\sthapa5\source\repos\fluidwave\fluidwave\wave.c(192): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\sthapa5\source\repos\fluidwave\fluidwave\wave.c(319): warning C4101: 'pos': unreferenced local variable
+  FluidWave.vcxproj -> C:\Users\sthapa5\source\repos\FluidWave\x64\Debug\FluidWave.exe

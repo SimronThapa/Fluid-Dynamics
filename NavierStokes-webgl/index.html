@@ -31,20 +31,25 @@
     void main(void)
     {
       // Simple advection by backstep.
-      // Todo: Try better methods like MacCormack (http://http.developer.nvidia.com/GPUGems3/gpugems3_ch30.html)
       vec2 samplePos = Texcoord - texture2D(OldVelocity, Texcoord).xy * DeltaT * InverseGridSize;
       vec2 outputVelocity = texture2D(OldVelocity, samplePos).xy;
+      
       // Special force: Flow from left to right
-      if(Texcoord.x < 0.05 && Texcoord.y < 0.7 && Texcoord.y > 0.3)
-        outputVelocity.x += (0.05 - Texcoord.x) * 10000.0 * DeltaT;
-
+      //instead of this, we use our wave equation, the fluid moves up and down like in our another project and doenot flow like //in this one. We should realize this in 3D system 
+     
+     // if(Texcoord.x < 0.05 && Texcoord.y < 0.7 && Texcoord.y > 0.3)
+       // outputVelocity.x += (0.05 - Texcoord.x) * 10000.0 * DeltaT;
+      
+      //velocty is 0 at the boundary 
       if(Texcoord.x > 1.0 - InverseGridSize.x * 2.0)
         outputVelocity = vec2(0.0);
 
       vec2 toCenter = vec2(0.2, 0.5) - Texcoord;
       toCenter.x *= InverseGridSize.y / InverseGridSize.x;
-      if(dot(toCenter, toCenter) < 0.002)
-        outputVelocity = vec2(0.0, 0.0);
+
+      //obstacle: black dot
+      //if(dot(toCenter, toCenter) < 0.002)
+       // outputVelocity = vec2(0.0, 0.0);
 
       gl_FragColor = vec4(outputVelocity, 0.0, 0.0);
     }
@@ -87,9 +92,10 @@
 
       vec2 toCenter = vec2(0.2, 0.5) - Texcoord;
       toCenter.x *= InverseGridSize.y / InverseGridSize.x;
-      if(dot(toCenter, toCenter) < 0.002)
-        return 0.0;
-      else
+      //removes the obstacle: bleck dot
+      //if(dot(toCenter, toCenter) < 0.002)
+       // return 0.0;
+      //else
         return texture2D(OldPressure, pos).x;
     }
 

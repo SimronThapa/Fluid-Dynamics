@@ -49,27 +49,6 @@ scale=1">         <style>
 			}
 		</script>
 
-		<script id="naiverStokesVertexShader" type="x-shader/x-vertex">
-			precision highp float;
-    		precision mediump sampler2D;
-    		attribute vec2 aPosition;
-    		
-    		varying vec2 vUv;
-    		//varying vec2 vL;
-    		//varying vec2 vR;
-    		//varying vec2 vT;
-    		//varying vec2 vB;
-    		uniform vec2 texelSize;
-    		void main () {
-        		vUv = aPosition * 0.5 + 0.5;
-        		//vL = vUv - vec2(texelSize.x, 0.0);
-        		//vR = vUv + vec2(texelSize.x, 0.0);
-        		//vT = vUv + vec2(0.0, texelSize.y);
-        		//vB = vUv - vec2(0.0, texelSize.y);
-        		gl_Position = vec4(aPosition, 0.0, 1.0);
-    		}
-		</script>
-		
 		<script id="pathTracingFragmentShader" type="x-shader/x-fragment">
 			//Perlin Noise Start
 			//
@@ -235,7 +214,8 @@ scale=1">         <style>
 			precision highp float;
 			precision highp int;
 			precision highp sampler2D;
-			varying vec3 norm;
+			
+            varying vec3 norm;
 			uniform sampler2D tFloorTexture;
 
 
@@ -265,24 +245,7 @@ scale=1">         <style>
 			#define STILL_WATER_LEVEL 	50.0
 			#define WATER_WAVE_AMP 		2.0
 
-
-			//--------------Advection - Naiver Stokes--------------------------------
-			//precision highp float;
-   			//precision mediump sampler2D;
-    		//varying vec2 vUv;
-    		//uniform sampler2D uVelocity;
-    		//uniform sampler2D uSource;
-    		//uniform vec2 texelSize;
-    		//uniform float dt;
-    		//uniform float dissipation;
-    		//void advection (vec2 vv, float dt, vec2 texelSize, float dissipation) {
-        	//	vec2 coord = vUv - dt * texture2D(uVelocity, vUv).xy * texelSize;
-        	//	vec3 advecColor;
-        	//	advecColor = (dissipation * texture2D(tFloorTexture, coord),1.0);
-    		//}
-			//-----------------------------------------------------------------------
-
-
+            //Perlin noise used here to get water height
 			float getWaterWaveHeight( vec3 pos )
 			{	
 				//Perlin noise code
@@ -292,17 +255,6 @@ scale=1">         <style>
 		    	// compose both noises
 		    	float displacement = b;
 		    	return STILL_WATER_LEVEL + displacement * WATER_WAVE_AMP;
-			}
-
-			float getFloorBumps(vec3 pos)
-			{
-				//Perlin noise code
-			
-		    	// get a 3d noise using the position, low frequency
-		    	float b = 20.0 * pnoise( 0.05 * pos + vec3(2.0 ), vec3( 100.0 ) );
-		    	// compose both noises
-		    	float displacement = 2.0 + b;
-		    	return displacement ;
 			}
 
 			//------------------------------------------------------------------------------------------------
@@ -350,34 +302,6 @@ scale=1">         <style>
 				float h = 0.0;
 				d = 0.0; // reset d
 				
-				if(pos.y <= 0.0){
-					for(int i = 0; i < 500; i++){
-						h = abs(pos.y - getFloorBumps(pos));
-						if (d > 10000.0 || h < 0.0) break;
-						d += h * 0.5;
-						pos += dir * h * 0.5; 
-					}
-
-					//if (h > WATER_WAVE_AMP) return t;
-
-					if (d < t && pos.z < 0.0 && pos.x > -150.0 && pos.x < 1549.6){
-						float eps = 1.0;
-						t = d;
-						hitWorldSpace = pos;
-						float dy = getFloorBumps(hitWorldSpace - vec3(0,eps,0)) - getFloorBumps(hitWorldSpace + vec3(0,eps,0));
-						float dx = getFloorBumps(hitWorldSpace - vec3(eps,0,0)) - getFloorBumps(hitWorldSpace + vec3(eps,0,0));
-						float dz = getFloorBumps(hitWorldSpace - vec3(0,0,eps)) - getFloorBumps(hitWorldSpace + vec3(0,0,eps));
-										
-						intersec.normal = normalize(vec3(dx,dy,dz));
-						intersec.emission = vec3(0);
-						intersec.color = vec3(0.1, 0.2, 0.4);
-						intersec.type = REFR;
-					}
-
-
-					return t;
-				}
-				else{
 					for(int i = 0; i < 500; i++){
 						h = abs(pos.y - getWaterWaveHeight(pos));
 						if (d > 10000.0 || h < 1.0) break;
@@ -403,9 +327,6 @@ scale=1">         <style>
 
 
 					return t;
-				}
-
-
 
 			}
 
@@ -472,23 +393,25 @@ scale=1">         <style>
 					vec3 x = r.origin + r.direction * t;
 					
 					    
-			        if (intersec.type == DIFF) // Ideal DIFFUSE reflection
-			        {
+			        //if (intersec.type == DIFF) // Ideal DIFFUSE reflection
+			        //{
 						//mask *= intersec.color;
-						accumCol = vec3(0.0);//calcDirectLightingQuad(mask, x, nl, quads[5], seed);
+					//	accumCol = vec3(0.0);//calcDirectLightingQuad(mask, x, nl, quads[5], seed);
 						
 						
-						sampleDiffuseBudget -= 1;
-						if (sampleDiffuseBudget < 0) break;
-						
-						continue;	
-			         }//end if (intersec.type == DIFF)
+					//	sampleDiffuseBudget -= 1;
+					//	if (sampleDiffuseBudget < 0) break;
+					//	
+					//	continue;	
+			        // }//end if (intersec.type == DIFF)
 
-					if (intersec.type == CHECK)  // Diffuse object underneath with ClearCoat on top
+					if (intersec.type == CHECK)  // Diffuse object underneath with ClearCoat on top i.e. the floor
 					{	
-						
+						//attaching texture to floor
 						vec2 uv = vec2((150.0 + x.x) / 400.0, (x.z - 150.0) / 400.0);
 						intersec.color *= texture2D(tFloorTexture, uv).rgb;
+                        
+                        //this is for getting black and whick check floor
 						//float q = clamp( mod( dot( floor(x.xz * 0.02), vec2(1.0) ), 2.0 ) , 0.0, 1.0 );
 						//intersec.color = checkCol0 * q + checkCol1 * (1.0 - q);	
 
@@ -499,7 +422,7 @@ scale=1">         <style>
 							
 					} //end if (intersec.type == CHECK)
 
-			        if (intersec.type == REFR)  // Ideal dielectric REFRACTION
+			        if (intersec.type == REFR)  // Ideal dielectric REFRACTION of the top fluid layer
 					{
 						checkWater = false;
 
@@ -514,21 +437,11 @@ scale=1">         <style>
 						float coefS = (nc * cosThetaInc - nt * cosThetaTra) / (nc * cosThetaInc + nt * cosThetaTra);
 						float coefP = (nc * cosThetaTra - nt * cosThetaInc) / (nc * cosThetaTra + nt * cosThetaInc);
 						float Re = ( (coefS * coefS) + (coefP * coefP) ) * 0.5; // Unpolarized
-
-						//if (rand(seed) < Re) // reflect ray from surface
-						//{
-						//	r = Ray( x, reflect(r.direction, nl) );
-						 //   	r.origin += r.direction * 2.0;
-						//	
-						 //   	continue;	
-						//}
-						//else // transmit ray through surface
-						//{
-							mask *= intersec.color;
-							r = Ray(x, tdir);
-							r.origin += r.direction * 2.0;
-							continue;
-						//}
+                        
+                        mask *= intersec.color;
+				        r = Ray(x, tdir);
+				        r.origin += r.direction * 2.0;
+				        continue;
 						
 					} // end if (intersec.type == REFR)
 					
@@ -554,17 +467,16 @@ scale=1">         <style>
 				//quads[3] = Quad( vec3(  0.0, 548.8,-559.2), vec3(549.6, 548.8,-559.2), vec3(549.6, 548.8,   0.0), vec3(  0.0, 548.8,   0.0),  z, vec3( 1 ),  DIFF);// Ceiling
 				quads[4] = Quad( vec3(  -250.0,   0.0,   0.0), vec3(1549.6,   0.0,   0.0), vec3(1549.6,   0.0,-1559.2), vec3(  -250.0,   0.0,-1559.2),  z, vec3( 1 ),  CHECK);// Floor
 				// Rectangular Area Light
-				quads[5] = Quad( vec3(100.0, 1548.0,-500.0), vec3(500.0, 1548.0,-500.0), vec3(500.0, 1548.0,-100.0), vec3(100.0, 1548.0,-100.0), L1, z, LIGHT);// Area Light Quad in ceiling
-				
+				quads[5] = Quad( vec3(100.0, 1548.0,-500.0), vec3(500.0, 1548.0,-500.0), vec3(500.0, 1548.0,-100.0), vec3(100.0, 1548.0,-100.0), L1, z, LIGHT);// Area Light Quad in ceiling	
 			}	
 
 			void main( void )
 			{
 				vec3 camPos     = vec3( uCameraMatrix[3][0],  uCameraMatrix[3][1],  uCameraMatrix[3][2]);
 				
-				vec3 camRight   = vec3(0.9,-0,-0.0 );//(uCameraMatrix[0][0],  uCameraMatrix[0][1],  uCameraMatrix[0][2]);
-				vec3 camUp      = vec3(0.04,0.2,-1);//(uCameraMatrix[1][0],  uCameraMatrix[1][1],  uCameraMatrix[1][2]);
-				vec3 camForward = vec3(-0.028,-0.82,-0.57);//(-uCameraMatrix[2][0], -uCameraMatrix[2][1], -uCameraMatrix[2][2]);
+				vec3 camRight   = vec3(0.9,-0,-0.0 );
+				vec3 camUp      = vec3(0.04,0.2,-1);
+				vec3 camForward = vec3(-0.028,-0.82,-0.57);
 
 
 				
@@ -577,11 +489,10 @@ scale=1">         <style>
 				vec2 pixelPos = vec2(0);
 				vec2 offset = vec2(0);
 				
-				//if ( !uCameraIsMoving ) 
-				{
-					offset.x = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
-					offset.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
-				}
+				
+				offset.x = r1 < 1.0 ? sqrt(r1) - 1.0 : 1.0 - sqrt(2.0 - r1);
+				offset.y = r2 < 1.0 ? sqrt(r2) - 1.0 : 1.0 - sqrt(2.0 - r2);
+				
 				
 				offset /= (uResolution);
 				pixelPos = (2.0 * (vUv + offset) - 1.0);
@@ -592,7 +503,8 @@ scale=1">         <style>
 				float randomAngle = rand(seed) * TWO_PI; // pick random point on aperture
 				float randomRadius = rand(seed) * uApertureSize;
 				vec3  randomAperturePos = ( cos(randomAngle) * camRight + sin(randomAngle) * camUp ) * randomRadius;
-				// point on aperture to focal point
+				
+                // point on aperture to focal point
 				vec3 finalRayDir = normalize(focalPoint - randomAperturePos);
 
 				Ray ray = Ray( camPos + randomAperturePos, finalRayDir );

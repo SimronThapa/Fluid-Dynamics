@@ -1,0 +1,27 @@
+﻿  wave.c
+c:\users\sthapa5\source\repos\fluidwave\fluidwave\wave.c(160): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\sthapa5\source\repos\fluidwave\fluidwave\wave.c(176): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\sthapa5\source\repos\fluidwave\fluidwave\wave.c(192): warning C4244: '=': conversion from 'double' to 'float', possible loss of data
+c:\users\sthapa5\source\repos\fluidwave\fluidwave\wave.c(319): warning C4101: 'pos': unreferenced local variable
+wave.obj : error LNK2019: unresolved external symbol _glfwInit referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwTerminate referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwSetErrorCallback referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwCreateWindow referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwWindowShouldClose referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwSetWindowShouldClose referenced in function _key_callback
+wave.obj : error LNK2019: unresolved external symbol _glfwGetFramebufferSize referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwSetFramebufferSizeCallback referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwPollEvents referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwGetInputMode referenced in function _cursor_position_callback
+wave.obj : error LNK2019: unresolved external symbol _glfwSetInputMode referenced in function _mouse_button_callback
+wave.obj : error LNK2019: unresolved external symbol _glfwGetCursorPos referenced in function _mouse_button_callback
+wave.obj : error LNK2019: unresolved external symbol _glfwSetKeyCallback referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwSetMouseButtonCallback referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwSetCursorPosCallback referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwSetScrollCallback referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwGetTime referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwMakeContextCurrent referenced in function _main
+wave.obj : error LNK2019: unresolved external symbol _glfwSwapBuffers referenced in function _draw_scene
+wave.obj : error LNK2019: unresolved external symbol _glfwSwapInterval referenced in function _main
+C:\Users\sthapa5\Desktop\examples-master\examples-master\lib\glfw3_d.lib : warning LNK4272: library machine type 'x64' conflicts with target machine type 'x86'
+C:\Users\sthapa5\source\repos\FluidWave\Debug\FluidWave.exe : fatal error LNK1120: 20 unresolved externals
